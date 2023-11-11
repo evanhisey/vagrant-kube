@@ -1,0 +1,25 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+guestOS= {{ vagrantOS }}
+
+Vagrant.configure("2") do |config|
+  config.vm.provider "libvirt" do |vb|
+     vb.memory = "2048"
+     vb.cpus = "1"
+  end
+  config.vm.provision :shell, path: "bootstrap.sh"
+
+  config.vm.define :master do |master|
+    master.vm.box = guestOS
+    master.vm.hostname = "master"
+#    master.vm.network "private_network", ip: "10.10.10.100"
+  end
+
+  %w{worker1 worker2}.each_with_index do |name, i|
+    config.vm.define name do |worker|
+     worker.vm.box = guestOS
+     worker.vm.hostname = name
+#     worker.vm.network "private_network", ip: "10.10.10.#{i+111}"
+    end
+  end  
+end
