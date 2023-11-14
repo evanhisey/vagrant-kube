@@ -1,0 +1,8 @@
+---
+- hosts: all
+  gather_facts: true
+
+  tasks:
+    - name: Basic task
+      ansible.builtin.debug:
+        msg: this is MVP
