@@ -1,8 +1,9 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
-guestOS= {{ vagrantOS }}
+guestOS= "{{ vagrantOS }}"
 
 Vagrant.configure("2") do |config|
+  config.vagrant.plugins = "vagrant-libvirt"
   config.vm.provider "libvirt" do |vb|
      vb.memory = "2048"
      vb.cpus = "1"
