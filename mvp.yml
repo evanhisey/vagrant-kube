@@ -3,6 +3,6 @@
   gather_facts: true
 
   tasks:
-    - name: Basic task
+    - name: output
       ansible.builtin.debug:
-        msg: this is MVP
+        msg: "{{ ansible_env.PWD }}"
