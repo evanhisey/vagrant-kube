@@ -1,0 +1,15 @@
+---
+- hosts: all
+  gather_facts: true
+  become: yes
+  
+  tasks:
+  - name: Update Box
+    ansible.builtin.dnf:
+     name: "*"
+     state: latest
+
+  - name: Install Kubernetes
+    ansible.builtin.dnf:
+     name: kubernetes
+     state: present

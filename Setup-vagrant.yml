@@ -2,25 +2,44 @@
 - name: Playbook for vagrant+kube
   hosts: all
   gather_facts: true
+  become: false
 
   tasks:
-   - name: Install kvm2
-     ansible.builtin.dnf:
-      name:
-       - vagrant
-       - vagrant-libvirt
-       - ansible
-      state: installed
-     notify: virtnetwork
-     become: true
+    - name: Install Vagrant and Ansible
+      ansible.builtin.dnf:
+       name:
+        - vagrant
+        - vagrant-libvirt
+        - ansible
+       state: installed
+      notify: virtnetwork
+      become: true
 
-   - name: Force all notified handler to run at this point, not waiting for normal sync points
-     ansible.builtin.meta: flush_handlers
+    - name: Force all notified handler to run at this point, not waiting for normal sync points
+      ansible.builtin.meta: flush_handlers
+    
+    - name: Create Kube Vagrant directory
+      ansible.builtin.file:
+       path: "{{ ansible_env.PWD }}/vagrant-kube"
+       state: directory
+       mode: 0755
+     
+    - name: Populate Kube Vagrant directory
+      ansible.builtin.template:
+       src: templates/{{ item }}
+       dest: "{{ ansible_env.PWD }}/vagrant-kube/{{ item }}"
+       mode: 0755
+      loop:
+       - bootstrap.yml
+       - vagrantfile
+
+  #  - name: Start Boxes
+
 
   handlers:
-   - name: Virtnetwork
-     ansible.builtin.systemd:
-      name: virtnetworkd
-      enabled: true
-      state: restarted
-     become: true
+    - name: Virtnetwork
+      ansible.builtin.systemd:
+       name: virtnetworkd
+       enabled: true
+       state: restarted
+      become: true
