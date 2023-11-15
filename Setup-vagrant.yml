@@ -20,21 +20,32 @@
     
     - name: Create Kube Vagrant directory
       ansible.builtin.file:
-       path: "{{ ansible_env.PWD }}/vagrant-kube"
+       path: "{{ ansible_env.PWD }}/{{ vagrantDir }}"
        state: directory
        mode: 0755
      
     - name: Populate Kube Vagrant directory
       ansible.builtin.template:
        src: templates/{{ item }}
-       dest: "{{ ansible_env.PWD }}/vagrant-kube/{{ item }}"
+       dest: "{{ ansible_env.PWD }}/{{ vagrantDir }}/{{ item }}"
        mode: 0755
       loop:
        - bootstrap.yml
        - vagrantfile
 
-  #  - name: Start Boxes
+    - name: Start Boxes
+    # Currently not decent modules for controlling Vagrant from Ansible,
+    # so we are going to use a shell command to make things work.
+    # Refactor to a role to improve versitality and be more "Ansible"
+      ansible.builtin.shell: |
+        cd {{ ansible_env.PWD }}/{{ vagrantDir }}
+        vagrant up --provision
+        cd ~
+      register: vagrant_results
 
+    - name: Report results of Vagrant
+      ansible.builtin.debug:
+        msg: "{{ vagrant_results }}"
 
   handlers:
     - name: Virtnetwork
