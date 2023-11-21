@@ -2,7 +2,7 @@
 - hosts: all
   gather_facts: true
   become: yes
-  
+
   tasks:
   - name: Update Box
     ansible.builtin.dnf:
@@ -11,5 +11,31 @@
 
   - name: Install Kubernetes
     ansible.builtin.dnf:
-     name: kubernetes
+     name:
+      - kubernetes
+      - cri-o
+      - cri-tools
+      - kubernetes-kubeadm
      state: present
+    notify: Start_kubelet
+
+  - name: Set Selinux permissive for kubelet
+    ansible.posix.selinux:
+      policy: targeted
+      state: permissive
+
+  - name: update /etc/hosts
+    ansible.builtin.lineinfile:
+      line: "{{ item }}"
+      dest: "/etc/hosts"
+      mode: 0644
+    loop: "{{ lookup('ansible.builtin.file', 'vagrant_ip.txt')| split('\n') }}"
+    ignore_errors: true
+
+  handlers:
+    - name: Start_kubelet
+      ansible.builtin.systemd:
+        enabled: true
+        name: kubelet
+        state: restarted
+        

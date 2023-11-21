@@ -1,0 +1,19 @@
+---
+  - name: Collect vagrant IPs
+    ansible.builtin.command:
+      chdir: "{{ ansible_env.PWD }}/{{ vagrantDir }}"
+      cmd: vagrant ssh-config {{ item }}
+    loop:
+      - "master"
+      - "worker1"  
+      - "worker2"
+    register: ip
+
+  - name: generate IP file
+    ansible.builtin.copy:
+      content: |
+        {{ ip.results[0].stdout_lines[1] |split(' ')| last }} {{ ip.results[0].stdout_lines[0] |split(' ')| last }}
+        {{ ip.results[1].stdout_lines[1] |split(' ')| last }} {{ ip.results[1].stdout_lines[0] |split(' ')| last }}
+        {{ ip.results[2].stdout_lines[1] |split(' ')| last }} {{ ip.results[2].stdout_lines[0] |split(' ')| last }}
+      dest: "{{ ansible_env.PWD }}/{{ vagrantDir }}/vagrant_ip.txt"
+      mode: 0644

@@ -12,7 +12,7 @@
         - vagrant-libvirt
         - ansible
        state: installed
-      notify: virtnetwork
+      notify: Virtnetwork
       become: true
 
     - name: Force all notified handler to run at this point, not waiting for normal sync points
@@ -23,27 +23,45 @@
        path: "{{ ansible_env.PWD }}/{{ vagrantDir }}"
        state: directory
        mode: 0755
-     
-    - name: Populate Kube Vagrant directory
-      ansible.builtin.template:
-       src: templates/{{ item }}
-       dest: "{{ ansible_env.PWD }}/{{ vagrantDir }}/{{ item }}"
-       mode: 0755
-      loop:
-       - bootstrap.yml
-       - vagrantfile
 
-    - name: Start Boxes
-    # Currently not decent modules for controlling Vagrant from Ansible,
+
+    - name: Add vagrantfile to Kube Vagrant directory
+      ansible.builtin.template:
+       src: templates/vagrantfile
+       dest: "{{ ansible_env.PWD }}/{{ vagrantDir }}/vagrantfile"
+       mode: 0644
+
+    - name: Add bootstrap to Kube Vagrant directory
+      ansible.builtin.copy:
+       src: templates/bootstrap.yml
+       dest: "{{ ansible_env.PWD }}/{{ vagrantDir }}/bootstrap.yml"
+       mode: 0644   
+      
+    - name: Start Boxes unprovisioned.
+    # Currently not seeing a decent modules for controlling Vagrant from Ansible,
     # so we are going to use a shell command to make things work.
-    # Refactor to a role to improve versitality and be more "Ansible"
-      ansible.builtin.shell: |
-        cd {{ ansible_env.PWD }}/{{ vagrantDir }}
-        vagrant up --provision
-        cd ~
+    # First run with out bootstrap
+      ansible.builtin.command: 
+        chdir: "{{ ansible_env.PWD }}/{{ vagrantDir }}"
+        cmd: vagrant up --no-provision 
       register: vagrant_results
 
     - name: Report results of Vagrant
+      ansible.builtin.debug:
+        msg: "{{ vagrant_results }}"
+
+    - name: Vagrant VM addresses
+      ansible.builtin.include_tasks:
+        file: get_guest_ip.yml
+ 
+    - name: Run Vagrant guest provisioning
+    # Now do provision since we have the IPs for /etc/host
+      ansible.builtin.command: 
+        chdir: "{{ ansible_env.PWD }}/{{ vagrantDir }}"
+        cmd: vagrant up --provision 
+      register: vagrant_results
+
+    - name: report bootstrap
       ansible.builtin.debug:
         msg: "{{ vagrant_results }}"
 
