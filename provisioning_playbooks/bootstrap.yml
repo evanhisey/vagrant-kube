@@ -1,0 +1,83 @@
+---
+- hosts: all
+  gather_facts: true
+  become: yes
+
+  tasks:
+  - name: Update Box
+    ansible.builtin.dnf:
+     name: "*"
+     state: latest
+
+  - name: Install Kubernetes
+    ansible.builtin.dnf:
+     name:
+      - kubernetes
+      - cri-o
+      - cri-tools
+      - kubernetes-kubeadm
+      - firewalld
+      - ethtool
+      - iproute-tc
+      - cronie
+     state: present
+    notify: Start_kubelet
+
+  - name: Set Selinux permissive for kubelet
+    ansible.posix.selinux:
+      policy: targeted
+      state: permissive
+
+  - name: update /etc/hosts
+    ansible.builtin.lineinfile:
+      line: "{{ item }}"
+      dest: "/etc/hosts"
+      mode: 0644
+    loop: "{{ lookup('ansible.builtin.file', 'vagrant_ip.txt')| split('\n') }}"
+    ignore_errors: true
+
+  - name: enable IP Forwarding
+    ansible.builtin.sysctl:
+      name: net.ipv4.ip_forward
+      value: '1'
+      sysctl_set: true
+      state: present
+      reload: true
+  
+  - name: load module for br_netfilter
+    community.general.modprobe:
+      name: br_netfilter
+      state: present
+      persistent: present
+
+  - name: Ensure filter is on
+    ansible.builtin.sysctl:
+      name: net.bridge.bridge-nf-call-iptables
+      value: '1'
+      sysctl_set: true
+      state: present
+      reload: true
+
+  - name: Disable Swap
+    ansible.builtin.command:
+      cmd: swapoff -a
+    
+  - name: Remove/disable zram to disable swap
+    ansible.builtin.dnf:
+      name: zram-generator-defaults
+      state: absent
+
+  handlers:
+    - name: Start_kubelet
+      ansible.builtin.systemd:
+        enabled: true
+        name: kubelet
+        state: restarted
+
+    - name: enable cri-o
+      ansible.builtin.systemd:
+       name: crio
+       enabled: true
+       state: restarted
+      become: true
+        

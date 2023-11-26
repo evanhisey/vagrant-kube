@@ -1,0 +1,11 @@
+---
+- name: Playbook for worker kube
+  hosts: all
+  gather_facts: true
+  become: true
+
+  tasks:
+  - name: attach worker kube node
+    ansible.builtin.command:
+      cmd: kubeadm join 192.168.124.204:6443 --token 7nwta8.2p0ci1wlqe5fg114 --discovery-token-ca-cert-hash sha256:21be231f14e13ddb38cba8fddae5762065618803fe1d8496cad2c5f53c5d0e3b
+    register: worker_results

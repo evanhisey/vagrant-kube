@@ -33,10 +33,12 @@
 
     - name: Add bootstrap to Kube Vagrant directory
       ansible.builtin.copy:
-       src: templates/bootstrap.yml
-       dest: "{{ ansible_env.PWD }}/{{ vagrantDir }}/bootstrap.yml"
-       mode: 0644   
-      
+       src: "{{ item }}" 
+       dest: "{{ ansible_env.PWD }}/{{ vagrantDir }}/"
+       mode: 0644
+      with_fileglob:
+        - "provisioning_playbooks/*"
+
     - name: Start Boxes unprovisioned.
     # Currently not seeing a decent modules for controlling Vagrant from Ansible,
     # so we are going to use a shell command to make things work.
@@ -48,22 +50,22 @@
 
     - name: Report results of Vagrant
       ansible.builtin.debug:
-        msg: "{{ vagrant_results }}"
+        msg: "{{ vagrant_results.stdout_lines }}"
 
     - name: Vagrant VM addresses
       ansible.builtin.include_tasks:
         file: get_guest_ip.yml
  
-    - name: Run Vagrant guest provisioning
-    # Now do provision since we have the IPs for /etc/host
+     # Now do provision since we have the IPs for /etc/host
+    - name: Run Vagrant provision master
       ansible.builtin.command: 
         chdir: "{{ ansible_env.PWD }}/{{ vagrantDir }}"
-        cmd: vagrant up --provision 
+        cmd: vagrant up --provision master
       register: vagrant_results
 
     - name: report bootstrap
       ansible.builtin.debug:
-        msg: "{{ vagrant_results }}"
+        msg: "{{ vagrant_results.stdout_lines }}"
 
   handlers:
     - name: Virtnetwork
@@ -72,3 +74,5 @@
        enabled: true
        state: restarted
       become: true
+
+   
