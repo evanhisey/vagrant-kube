@@ -2,14 +2,13 @@
 - name: Playbook for kube master node
   hosts: all
   gather_facts: true
-  become: false
+  become: true
 
   tasks:
-  - name: Initiliaze Kube cluster
+  - name: Initialize Kube cluster
     ansible.builtin.command:
       cmd: kubeadm init --ignore-preflight-errors=NumCPU # setting up on a single core host
-    register: kube-results
-    become: True
+    register: kube_results
 
   - name: Setup kubeconfig for vagrant user
     ansible.builtin.copy:
@@ -18,3 +17,4 @@
       group: "{{ ansible_user_gid}}"
       owner: "{{ ansible_user_id}}"
       remote_src: true
+    become: false  
