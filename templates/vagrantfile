@@ -1,6 +1,6 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
-guestOS= "{{ vagrantOS }}"
+guestOS= "fedora/38-cloud-base"
 
 Vagrant.configure("2") do |config|
   config.vagrant.plugins = "vagrant-libvirt"
@@ -9,17 +9,6 @@ Vagrant.configure("2") do |config|
      vb.cpus = "1"
   end
   
-  config.vm.provision "ansible" do |ansible|
-    ansible.verbose = "v"
-    ansible.playbook = "bootstrap.yml"
-  end
-
-  config.vm.define :master do |master|
-    master.vm.box = guestOS
-    master.vm.hostname = "master"
-  
-  end
-
   %w{worker1 worker2}.each_with_index do |name, i|
     config.vm.define name do |worker|
      worker.vm.box = guestOS
@@ -27,4 +16,21 @@ Vagrant.configure("2") do |config|
   
     end
   end  
+ 
+  config.vm.define :master do |master|
+    master.vm.box = guestOS
+    master.vm.hostname = "master"
+    master.vm.provision "ansible" do |ansible|
+      ansible.verbose = "v"
+      ansible.limit = "all"
+      ansible.groups = {
+         "cluster" => [
+         "master",
+         "worker1",
+         "worker2",
+         ]
+       }  
+      ansible.playbook = "bootstrap.yml"
+      end
+  end
 end
