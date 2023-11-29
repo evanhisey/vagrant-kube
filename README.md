@@ -1,6 +1,7 @@
-# vagrant-kube
+# Welcome to the YAVAK (Yet another Vagrant Ansible Kube) Playbooks
 
-Small project to quickly deploy an MVP Kube cluster using Fedora, vagrant, and ansible. 
+Small project to quickly deploy an MVP Kube cluster using Fedora, vagrant, and ansible. Most of the current playbooks use Docker, Ubuntu
+or another not so native Fedora/RH component to work. I like staying in the RH ecosystem so YAVAK's goal was to be able to take Fedora thumbdrive and go from zero to an kubernetes cluster without needing lots of extra repos.
 
 Currently it has been test on Fedora 37-39 to host clusters and additionally RHEL9 can acts as ansible controller..
 

@@ -1,2 +1,2 @@
-vagrantOS: "fedora/38-cloud-base"
+vagrantOS: "fedora/39-cloud-base"
 vagrantDir: "vagrant-kube"
