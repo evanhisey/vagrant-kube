@@ -1,15 +1,20 @@
 ---
-- name: Playbook for worker kube
-  hosts: all
-  gather_facts: true
-  become: true
+  - name: Is worker configured
+    ansible.builtin.stat:
+      path: /etc/kubernetes/kubelet.conf 
+    register: kubelet_conf
 
-  tasks:
-  - name: Get Master IP
-    set_fact:
-      hosts: "{{ lookup('ansible.builtin.file', 'vagrant_ip.txt')| split('\n') }}"
+  - name: Join Cluster
+    block:  
+    - name: Generate join command
+      ansible.builtin.command:
+        cmd: kubeadm token create --print-join-command
+      register: join_command
+      delegate_to: master
 
-  - name: attach worker kube node
-    ansible.builtin.command:
-      cmd: kubeadm join {{ hosts[0] | split(' ') | first }}:6443 --token 7nwta8.2p0ci1wlqe5fg114 --discovery-token-ca-cert-hash sha256:21be231f14e13ddb38cba8fddae5762065618803fe1d8496cad2c5f53c5d0e3b
-    register: worker_results
+    - name: attach worker kube node
+      ansible.builtin.command:
+        cmd: "{{ join_command.stdout }}"
+      register: worker_results
+    when: not kubelet_conf.stat.exists
+

@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Bootstrap Cluster
+  hosts: all
   gather_facts: true
   become: yes
 
@@ -20,13 +21,21 @@
       - ethtool
       - iproute-tc
       - cronie
+      - python3-kubernetes
      state: present
-    notify: Start_kubelet
+   
 
   - name: Set Selinux permissive for kubelet
     ansible.posix.selinux:
       policy: targeted
       state: permissive
+
+  - name: add switch to kublet config to fix loop issue
+    ansible.builtin.lineinfile:
+      line: 'Environment="KUBELET_EXTRA_ARGS=--cgroup-driver=systemd --resolv-conf=/run/systemd/resolve/resolv.conf"'
+      path: /etc/systemd/system/kubelet.service.d/kubeadm.conf
+      regexp: '^Environment="KUBELET_EXTRA_ARGS='
+      state: present
 
   - name: update /etc/hosts
     ansible.builtin.lineinfile:
@@ -61,23 +70,36 @@
   - name: Disable Swap
     ansible.builtin.command:
       cmd: swapoff -a
-    
+    when: ansible_swaptotal_mb > 0
+
   - name: Remove/disable zram to disable swap
     ansible.builtin.dnf:
       name: zram-generator-defaults
       state: absent
 
-  handlers:
-    - name: Start_kubelet
-      ansible.builtin.systemd:
-        enabled: true
-        name: kubelet
-        state: restarted
+  - name: Start_kubelet
+    ansible.builtin.systemd:
+      enabled: true
+      name: kubelet
+      state: restarted
+    become: true
 
-    - name: enable cri-o
-      ansible.builtin.systemd:
-       name: crio
-       enabled: true
-       state: restarted
-      become: true
+  - name: enable cri-o
+    ansible.builtin.systemd:
+     name: crio
+     enabled: true
+     state: restarted
+    become: true     
+  
+  - name: Configure Master node
+    ansible.builtin.include_tasks:
+      file: kube_master.yml
+    when: ansible_hostname == "master"
+
+  - name: Configure Worker node
+    ansible.builtin.include_tasks:
+      file: kube_worker.yml
+    when: ansible_hostname != "master"
+
+
         

@@ -1,6 +1,5 @@
 ---
-- name: Playbook for vagrant+kube
-  hosts: all
+- hosts: all
   gather_facts: true
   become: false
 
@@ -12,11 +11,14 @@
         - vagrant-libvirt
         - ansible
        state: installed
-      notify: Virtnetwork
       become: true
 
-    - name: Force all notified handler to run at this point, not waiting for normal sync points
-      ansible.builtin.meta: flush_handlers
+    - name: Virtnetwork
+      ansible.builtin.systemd:
+       name: virtnetworkd
+       enabled: true
+       state: started
+      become: true
     
     - name: Create Kube Vagrant directory
       ansible.builtin.file:
@@ -27,10 +29,12 @@
 
     - name: Add vagrantfile to Kube Vagrant directory
       ansible.builtin.template:
-       src: templates/vagrantfile
-       dest: "{{ ansible_env.PWD }}/{{ vagrantDir }}/vagrantfile"
+       src: "{{ item }}"
+       dest: "{{ ansible_env.PWD }}/{{ vagrantDir }}/"
        mode: 0644
-
+      with_fileglob:
+        - "templates/*"
+        
     - name: Add bootstrap to Kube Vagrant directory
       ansible.builtin.copy:
        src: "{{ item }}" 
@@ -57,22 +61,30 @@
         file: get_guest_ip.yml
  
      # Now do provision since we have the IPs for /etc/host
-    - name: Run Vagrant provision master
+    - name: Run Vagrant provision
       ansible.builtin.command: 
         chdir: "{{ ansible_env.PWD }}/{{ vagrantDir }}"
-        cmd: vagrant up --provision master
+        cmd: vagrant provision {{ item }}
+      loop:
+        - master
+        - worker1
+        - worker2  
       register: vagrant_results
-
-    - name: report bootstrap
-      ansible.builtin.debug:
-        msg: "{{ vagrant_results.stdout_lines }}"
-
-  handlers:
-    - name: Virtnetwork
-      ansible.builtin.systemd:
-       name: virtnetworkd
-       enabled: true
-       state: restarted
+      run_once: true
+    
+    - name: add Vagrant boxes to /etc/hosts
+      ansible.builtin.lineinfile:
+        line: "{{ item }}"
+        dest: "/etc/hosts"
+        mode: 0644
+      loop: "{{ lookup('ansible.builtin.file', 'vagrant_ip.txt')| split('\n') }}"
+      delegate_to: localhost
       become: true
+
+
+
+
+  
+ 
 
    

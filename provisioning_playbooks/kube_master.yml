@@ -1,20 +1,74 @@
 ---
-- name: Playbook for kube master node
-  hosts: all
-  gather_facts: true
-  become: true
+  - name: Check if Kube is Initialize
+    stat:
+      path: /etc/kubernetes/manifests/kube-apiserver.yaml
+    register: kube_apiserver
 
-  tasks:
-  - name: Initialize Kube cluster
+  - name: Check if Kube is configed for user
+    stat:
+      path: "{{ ansible_env.PWD }}/.kube/config"
+    register: kube_config
+
+  - name: Cluster Initialize
+    block:
+     - name: Initialize Master node
+       ansible.builtin.command:  
+         cmd: kubeadm init --ignore-preflight-errors=NumCPU --apiserver-advertise-address="{{ ansible_default_ipv4.address }}" --apiserver-cert-extra-sans="{{ ansible_default_ipv4.address }}"
+# setting up on a single core host
+       register: kube_results
+
+     - name: Export Kube results
+       ansible.builtin.copy:
+          content: "{{ kube_results }}"
+          dest: kube_results.text
+          mode: 0644
+       delegate_to: localhost
+       become: false
+    when: not kube_apiserver.stat.exists 
+
+  - name: Setup Kube for User
+    block:
+    - name: Create .kube directory
+      ansible.builtin.file:
+        path: "{{ ansible_env.PWD }}/.kube"
+        group: vagrant
+        owner: vagrant
+        state: directory
+        mode: 0744
+
+    - name: Copy kubeconfig for vagrant user
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: "{{ ansible_env.PWD }}/.kube/config"
+        group: vagrant
+        owner: vagrant
+        remote_src: true
+        mode: 0644
+    when: not kube_config.stat.exists
+
+  - name: Check for Calico Container
     ansible.builtin.command:
-      cmd: kubeadm init --ignore-preflight-errors=NumCPU # setting up on a single core host
-    register: kube_results
+      cmd: kubectl get pods -n kube-system --no-headers=true -o custom-columns=NAME_OF_MY_POD:.metadata.name | grep calico
+    register: calico
 
-  - name: Setup kubeconfig for vagrant user
-    ansible.builtin.copy:
-      src: /etc/kubernetes/admin.conf
-      dest: "{{ ansible_env.PWD }}.kube/config"
-      group: "{{ ansible_user_gid}}"
-      owner: "{{ ansible_user_id}}"
-      remote_src: true
-    become: false  
+  - name: Setup Calico CNI
+    block:
+    - name: Download calico.conf
+      ansible.builtin.get_url:
+        url: "https://docs.projectcalico.org/manifests/calico.yaml"
+        dest: "{{ ansible_env.PWD }}/calico.yaml"
+  
+    - name: Install calico CNI
+      ansible.builtin.command: 
+        cmd: kubectl create -f {{ ansible_env.PWD }}/calico.yaml
+      become: false
+    when: calico.stat.exists
+
+  - name: load initial containers
+    ansible.builtin.import_tasks:
+      file: kube_dashboard.yml
+
+  - name: Report end of run
+    ansible.builtin.debug:
+      msg: "{{ ansible_hostname }} run complete"
+  
