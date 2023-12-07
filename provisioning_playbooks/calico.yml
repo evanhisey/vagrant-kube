@@ -1,0 +1,20 @@
+---
+  - name: Is Calico installed
+    kubernetes.core.k8s_info:
+      kind: Deployment
+      namespace: kube-system
+      name: calico-kube-controllers
+    register: calico_service
+ 
+  - name: Setup Calico CNI
+    block:
+    - name: Download calico.conf
+      ansible.builtin.get_url:
+        url: "https://docs.projectcalico.org/manifests/calico.yaml"
+        dest: "~/calico.yaml"
+  
+    - name: Install calico CNI
+      kubernetes.core.k8s:
+        state: present
+        src: ~/calico.yaml
+      when: calico_service.resources[0] is not defined

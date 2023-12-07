@@ -46,27 +46,27 @@
         mode: 0644
     when: not kube_config.stat.exists
 
-  - name: Check for Calico Container
-    ansible.builtin.command:
-      cmd: kubectl get pods -n kube-system --no-headers=true -o custom-columns=NAME_OF_MY_POD:.metadata.name | grep calico
-    register: calico
+  - name: Pause for service to spin up
+    kubernetes.core.k8s_info:
+      kind: Deployment
+      namespace: kube-system
+      label_selectors:
+        - k8s-app=kube-dns
+    register: kube_status
+    until: kube_status is not failed
+    retries: 10
+    delay: 10
+    become: false
 
-  - name: Setup Calico CNI
-    block:
-    - name: Download calico.conf
-      ansible.builtin.get_url:
-        url: "https://docs.projectcalico.org/manifests/calico.yaml"
-        dest: "{{ ansible_env.PWD }}/calico.yaml"
+  - name: load Calico
+    ansible.builtin.import_tasks:
+      file: calico.yml
+    become: false
   
-    - name: Install calico CNI
-      ansible.builtin.command: 
-        cmd: kubectl create -f {{ ansible_env.PWD }}/calico.yaml
-      become: false
-    when: calico.stat.exists
-
-  - name: load initial containers
+  - name: load Dashboard
     ansible.builtin.import_tasks:
       file: kube_dashboard.yml
+    become: false    
 
   - name: Report end of run
     ansible.builtin.debug:

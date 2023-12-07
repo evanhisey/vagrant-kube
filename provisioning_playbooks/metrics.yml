@@ -1,0 +1,20 @@
+---
+  - name: Download metric manifest to the cluster.
+    ansible.builtin.get_url:
+      url: https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+      dest: ~/metric.yaml
+      mode: '0664'
+  
+  - name: Tweak metric yaml
+    ansible.builtin.lineinfile:
+      path: ~/metric.yaml
+      insertafter: '^\ *-\ --metric-resolution'
+      state: present
+      line: "        - {{ item }}" 
+    loop:   
+      - "--kubelet-insecure-tls=true"
+     
+  - name: Apply metrics-server manifest to the cluster.
+    kubernetes.core.k8s:
+      state: present
+      src: ~/metric.yaml

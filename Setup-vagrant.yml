@@ -52,10 +52,6 @@
         cmd: vagrant up --no-provision 
       register: vagrant_results
 
-    - name: Report results of Vagrant
-      ansible.builtin.debug:
-        msg: "{{ vagrant_results.stdout_lines }}"
-
     - name: Vagrant VM addresses
       ansible.builtin.include_tasks:
         file: get_guest_ip.yml
@@ -68,18 +64,27 @@
       loop:
         - master
         - worker1
-        - worker2  
+      #  - worker2  
       register: vagrant_results
       run_once: true
     
+    - name: get load  cluster IPs
+      ansible.builtin.slurp:
+        src: "{{ ansible_env.PWD }}/{{ vagrantDir }}/vagrant_ip.txt"
+      register: IPs  
+
     - name: add Vagrant boxes to /etc/hosts
       ansible.builtin.lineinfile:
+        regexp: '{{ item | split | last }}\b'
         line: "{{ item }}"
         dest: "/etc/hosts"
-        mode: 0644
-      loop: "{{ lookup('ansible.builtin.file', 'vagrant_ip.txt')| split('\n') }}"
-      delegate_to: localhost
+        owner: root
+        group: root
+        mode: '0644'
+      loop: "{{ IPs.content | b64decode | trim | split('\n') }}"
       become: true
+     
+      
 
 
 

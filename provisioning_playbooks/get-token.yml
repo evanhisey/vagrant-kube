@@ -1,0 +1,17 @@
+---
+- hosts: master
+  gather_facts: false
+  become: false
+  
+  tasks:  
+  - name: Get Token
+    ansible.builtin.command:
+      cmd: kubectl -n kubernetes-dashboard create token admin-user
+    register: token
+      
+  - name: Write token to file
+    ansible.builtin.copy:
+      dest: bearer_token.txt
+      content: "{{ token.stdout }}"
+      mode: 0600
+    delegate_to: localhost
