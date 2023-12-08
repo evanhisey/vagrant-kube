@@ -59,12 +59,12 @@
     become: false
 
   - name: load Calico
-    ansible.builtin.import_tasks:
+    ansible.builtin.include_tasks:
       file: calico.yml
     become: false
   
   - name: load Dashboard
-    ansible.builtin.import_tasks:
+    ansible.builtin.include_tasks:
       file: kube_dashboard.yml
     become: false    
 
