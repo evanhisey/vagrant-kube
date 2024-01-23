@@ -15,6 +15,12 @@ To use the playbooks the ansible controller needs to have the following installe
 
 The Ansible remote-user needs to have the ability to sudo to execute certian system tasks such as install new packages. The playbook is desing to work targeting either the localhost or a remote server to install Vagrant establish a "master" node and "working" nodes, currently limited to 1 of each. Target vagrant needs atleast 4 cores and 6 gig of ram. The complete cluster will provide a minimum setup of kubernetes, calico and kubernetes-dashboard. Planned supplemental playbooks will install metrics-server. 
 
+To run the playbook, do a local clone of the repo. you may want to update the name of the vagrant deploy directory in the "group_vars/all.yml". Then execute "ansible-playbook Setup-vagrant.yml"
+
+To access the kube-dashboard from the vagrant host, login in to the master node with "vagrant ssh master" and execute "kubectl proxy --address=master". This will expose the port 8001 to the vagrant host.
+
+To simplify future Ansible operations on the cluster, an "ansible.cfg" file is added to the vagrant directory which setups the vagrant-ansible provider inventory for use with regular ansible commands.
+
 #### A note about installing kubernetes with rpms
 
 A note about the Kubernetes rpms in Fedora F37, F38, and F39 (potential change in F40). Most of the Kube docs for Fedora run to the very old ( so lots of changes and the Interweb forgets nothing), so this will proivde some in sight on to the process used here.
